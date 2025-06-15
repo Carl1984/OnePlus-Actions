@@ -180,13 +180,13 @@ jobs:
             patch -p1 -F 3 < lz4k_oplus.patch || true
           fi
           
-      - name: 🔧 Add sched_ext (配置 风驰内核驱动)
-        run: |
-         cd kernel_workspace/kernel_platform/
-         git clone https://github.com/HanKuCha/sched_ext.git
-         cp -r ./sched_ext/* ./common/kernel/sched
-         rm -rf ./sched_ext/.git
-         cd common/kernel/sched
+      #- name: 🔧 Add sched_ext (配置 风驰内核驱动)
+        #run: |
+         #cd kernel_workspace/kernel_platform/
+         #git clone https://github.com/HanKuCha/sched_ext.git
+         #cp -r ./sched_ext/* ./common/kernel/sched
+         #rm -rf ./sched_ext/.git
+         #cd common/kernel/sched
 
       - name: 🔧 Apply new hook & Add configuration (配置 一些内核开关)
         run: |
