@@ -199,7 +199,7 @@ jobs:
 
       - name: 应用 lz4 patch  
         run: |
-          cd cd kernel_workspace/kernel_platform/common
+          cd kernel_workspace/kernel_platform/common
           #patch -p1 < 001-lz4.patch
           git apply --verbose -p1 < 001-lz4.patch 
           patch -p1 < 002-zstd.patch
