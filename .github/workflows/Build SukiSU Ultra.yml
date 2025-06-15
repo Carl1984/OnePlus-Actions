@@ -126,7 +126,7 @@ jobs:
 
       - name: lz补丁
         run: |
-          cd kernel_workspace
+          cd kernel_workspace/kernel_platform
      
           
           git clone https://github.com/Carl1984/oppo_oplus_realme_sm8650.git
@@ -199,9 +199,9 @@ jobs:
 
       - name: 应用 lz4 patch  
         run: |
-          cd kernel_workspace/common
+          cd cd kernel_workspace/kernel_platform/common
           #patch -p1 < 001-lz4.patch
-          git apply --verbose -p1 < 001-lz4.patch --verbose
+          git apply --verbose -p1 < 001-lz4.patch 
           patch -p1 < 002-zstd.patch
 
       - name: 🔧 Apply new hook & Add configuration (配置 一些内核开关)
