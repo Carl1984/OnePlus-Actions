@@ -167,13 +167,13 @@ jobs:
           cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           # cp ../kernel_patches/001-lz4.patch ./common/
           # cp ../kernel_patches/002-zstd.patch ./common/
-          if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-            # Copy lz4k from ShirkNeko
-            cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
-            cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
-            cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
-            cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
-          fi
+          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
+          #   # Copy lz4k from ShirkNeko
+          #   cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
+          #   cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
+          #   cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
+          #   cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+          # fi
           
           cd ./common
           patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
@@ -182,12 +182,12 @@ jobs:
           patch -p1 -F 3 < syscall_hooks.patch
           # patch -p1 < 001-lz4.patch || true
           # patch -p1 < 002-zstd.patch || true
-          if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
-            patch -p1 -F 3 < lz4kd.patch || true
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4k_oplus.patch ./
-            patch -p1 -F 3 < lz4k_oplus.patch || true
-          fi
+          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
+          #   cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
+          #   patch -p1 -F 3 < lz4kd.patch || true
+          #   cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4k_oplus.patch ./
+          #   patch -p1 -F 3 < lz4k_oplus.patch || true
+          # fi
           
       #- name: 🔧 Add sched_ext (配置 风驰内核驱动)
         #run: |
@@ -237,12 +237,12 @@ jobs:
           echo "CONFIG_TCP_CONG_BIC=n" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_WESTWOOD=n" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_HTCP=n" >> ./common/arch/arm64/configs/gki_defconfig
-          if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-            # Add lz4kd
-            echo "CONFIG_CRYPTO_LZ4KD=y" >> ./common/arch/arm64/configs/gki_defconfig
-            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> ./common/arch/arm64/configs/gki_defconfig
-            echo "CONFIG_ZRAM_WRITEBACK=y" >> ./common/arch/arm64/configs/gki_defconfig
-          fi
+          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
+          #   # Add lz4kd
+          #   echo "CONFIG_CRYPTO_LZ4KD=y" >> ./common/arch/arm64/configs/gki_defconfig
+          #   echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          #   echo "CONFIG_ZRAM_WRITEBACK=y" >> ./common/arch/arm64/configs/gki_defconfig
+          # fi
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
           
@@ -321,21 +321,20 @@ jobs:
       #    path: ./AnyKernel3/*
          
       - name: 📤 Upload AnyKernel3 (上传 AnyKernel3)
-        if: ${{ github.event.inputs.lz4kd != 'Open' }}
         uses: actions/upload-artifact@v4
         with:
          name: AnyKernel3_SukiSU_Ultra_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
          path: ./AnyKernel3/*
          
-      - name: 📝 Find zram.ko & crypto_zstdn.ko (查找 zram.ko & crypto_zstdn.ko)
-        if: ${{ github.event.inputs.lz4kd == 'Open' }}
-        run: |
-          find -name zram.ko
-          find -name crypto_zstdn.ko
+      # - name: 📝 Find zram.ko & crypto_zstdn.ko (查找 zram.ko & crypto_zstdn.ko)
+      #   if: ${{ github.event.inputs.lz4kd == 'Open' }}
+      #   run: |
+      #     find -name zram.ko
+      #     find -name crypto_zstdn.ko
           
-      - name: 📤 Upload zram.ko (上传 zram.ko)
-        if: ${{ github.event.inputs.lz4kd == 'Open' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: zram.ko
-          path: ./kernel_workspace/kernel_platform/common/out/drivers/block/zram/zram.ko
+      # - name: 📤 Upload zram.ko (上传 zram.ko)
+      #   if: ${{ github.event.inputs.lz4kd == 'Open' }}
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: zram.ko
+      #     path: ./kernel_workspace/kernel_platform/common/out/drivers/block/zram/zram.ko
