@@ -1,18 +1,14 @@
 name: Build OnePlus SukiSU Ultra
 env:
+  CPU: 'sm8650'
   ANDROID_VERSION: 'android14'
   KERNEL_VERSION: '6.1'
   KERNEL_NAME: 'android14-11-o-g239209decfd3'
+  CPUD: 'pineapple'
+  
 on:
   workflow_dispatch:
     inputs:
-      CPU:
-        description: "CPU分支"
-        required: true
-        type: choice
-        options:
-          - 'sm8650'
-        default: 'sm8650'
       FEIL:
         description: "手机型号"
         required: true
@@ -22,27 +18,6 @@ on:
           - 'oneplus_ace3_pro'
           - 'oneplus_ace5'
         default: 'oneplus_ace5'
-      CPUD:
-        description: "处理器代号"
-        required: true
-        type: choice
-        options:
-          - 'pineapple'
-        default: 'pineapple'
-      ANDROID_VERSION:
-        description: "内核安卓版本"
-        required: true
-        type: choice
-        options:
-          - 'android14'
-        default: 'android14'
-      KERNEL_VERSION:
-        description: "内核版本"
-        required: true
-        type: choice
-        options:
-          - '6.1'
-        default: '6.1'
       ksu_type:
         description: '要用的ksu'
         required: true
@@ -52,14 +27,19 @@ on:
           - ksun
           - None
         default: 'SukiUltra'
-      # lz4kd:
-      #  description: "是否启用lz4kd"
-      #  required: true
-      #  type: choice
-      #  options:
-      #     - 'Open'
-      #     - 'Close'
-      #  default: 'Open'
+      lz4kd:
+       description: "是否启用lz4kd"
+       required: true
+       type: choice
+       options:
+          - 'true'
+          - 'false'
+       default: 'false'
+      KPM:
+        type: boolean
+        description: "是否启用KPM？"
+        required: true
+        default: false
         
 jobs:
   build:
@@ -81,11 +61,18 @@ jobs:
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
-
+          
+      - name: Show selected inputs debug
+        run: |
+          echo "Selected FEIL: ${{ github.event.inputs.FEIL }}"
+          echo "Selected ksu_type: ${{ github.event.inputs.ksu_type }}"
+          echo "Selected lz4kd: ${{ github.event.inputs.lz4kd }}"
+          echo "Selected KPM: ${{ github.event.inputs.KPM }}"
+          
       - name: 📦 Configure Git (设置下载账户)
         run: |
          git config --global user.name "bulid"
-         git config --global user.email "2210077278@qq.com"
+         git config --global user.email "314393811@qq.com"
 
       - name: 📦 Install dependencies (安装依赖)
         run: |
@@ -110,7 +97,7 @@ jobs:
       - name: 📥 Initialize repo and sync (克隆内核源码)
         run: |
          mkdir kernel_workspace && cd kernel_workspace
-         repo init -u https://github.com/Xiaomichael/kernel_manifest.git -b refs/heads/oneplus/${{ github.event.inputs.CPU }} -m ${{ github.event.inputs.FEIL }}.xml --depth=1
+         repo init -u https://github.com/Xiaomichael/kernel_manifest.git -b refs/heads/oneplus/${{ env.CPU }} -m ${{ github.event.inputs.FEIL }}.xml --depth=1
          repo sync
          rm kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
          rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
@@ -120,9 +107,11 @@ jobs:
          sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_platform/common/scripts/setlocalversion
          sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_platform/msm-kernel/scripts/setlocalversion
          sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_platform/external/dtc/scripts/setlocalversion
-         sed -i '$s|echo "\$res"|echo "android14-11-o-g239209decfd3"|' kernel_platform/common/scripts/setlocalversion            
-         sed -i '$s|echo "\$res"|echo "android14-11-o-g239209decfd3"|' kernel_platform/msm-kernel/scripts/setlocalversion
-         sed -i '$s|echo "\$res"|echo "android14-11-o-g239209decfd3"|' kernel_platform/external/dtc/scripts/setlocalversion
+         # sed -i '$s|echo "\$res"|echo "android14-11-o-g239209decfd3"|' kernel_platform/common/scripts/setlocalversion     
+         sed -i '$s|echo "\$res"|echo \"-${{ env.KERNEL_NAME }}\"|' kernel_platform/common/scripts/setlocalversion   
+         sed -i '$s|echo "\$res"|echo \"-${{ env.KERNEL_NAME }}\"|' kernel_platform/msm-kernel/scripts/setlocalversion
+         sed -i '$s|echo "\$res"|echo \"-${{ env.KERNEL_NAME }}\"|' kernel_platform/external/dtc/scripts/setlocalversion
+
 
       - name: lz补丁
         run: |
@@ -156,38 +145,36 @@ jobs:
         if: ${{github.event.inputs.ksu_type == 'SukiUltra'}}
         run: |
           cd kernel_workspace
-          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
+          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
           git clone https://github.com/Xiaomichael/kernel_patches.git
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           cd kernel_platform
           # Copy SUSFS patches
-          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
+          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{  env.KERNEL_VERSION }}.patch ./common/
           cp ../kernel_patches/next/syscall_hooks.patch ./common/
           cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
           cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          # cp ../kernel_patches/001-lz4.patch ./common/
-          # cp ../kernel_patches/002-zstd.patch ./common/
-          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-          #   # Copy lz4k from ShirkNeko
-          #   cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
-          #   cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
-          #   cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
-          #   cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
-          # fi
+          if [ "${{ github.event.inputs.lz4kd }}" == "true" ]; then
+            # Copy lz4k from ShirkNeko
+            cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
+            cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
+            cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
+            cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+          fi
           
           cd ./common
-          patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
+          patch -p1 < 50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{  env.KERNEL_VERSION }}.patch || true
           cp ../../kernel_patches/69_hide_stuff.patch ./
           patch -p1 -F 3 < 69_hide_stuff.patch
           patch -p1 -F 3 < syscall_hooks.patch
           # patch -p1 < 001-lz4.patch || true
           # patch -p1 < 002-zstd.patch || true
-          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-          #   cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
-          #   patch -p1 -F 3 < lz4kd.patch || true
-          #   cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4k_oplus.patch ./
-          #   patch -p1 -F 3 < lz4k_oplus.patch || true
-          # fi
+          if [ "${{ github.event.inputs.lz4kd }}" == "true" ]; then
+            cp ../../SukiSU_patch/other/zram/zram_patch/${{  env.KERNEL_VERSION }}/lz4kd.patch ./
+            patch -p1 -F 3 < lz4kd.patch || true
+            cp ../../SukiSU_patch/other/zram/zram_patch/${{  env.KERNEL_VERSION }}/lz4k_oplus.patch ./
+            patch -p1 -F 3 < lz4k_oplus.patch || true
+          fi
           
       #- name: 🔧 Add sched_ext (配置 风驰内核驱动)
         #run: |
@@ -205,14 +192,15 @@ jobs:
           patch -p1 < 002-zstd.patch
 
       - name: 🔧 Apply new hook & Add configuration (配置 一些内核开关)
-        if: ${{github.event.inputs.ksu_type == 'SukiUltra'}}
-        run: |
-        
+        run: |        
           cd kernel_workspace/kernel_platform
           if [[ "${{ github.event.inputs.ksu_type }}" == "SukiUltra" ]]; then
             # Add KSU configuration settings
             echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
-            echo "CONFIG_KPM=y" >> ./common/arch/arm64/configs/gki_defconfig
+            if [[ "${{ github.event.inputs.KPM }}" == "true" ]]; then
+              echo "CONFIG_KPM=y" >> ./common/arch/arm64/configs/gki_defconfig
+            fi
+            
             # Add VFS configuration settings
             echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./common/arch/arm64/configs/gki_defconfig
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./common/arch/arm64/configs/gki_defconfig      
@@ -240,38 +228,34 @@ jobs:
           echo "CONFIG_TCP_CONG_BIC=n" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_WESTWOOD=n" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_HTCP=n" >> ./common/arch/arm64/configs/gki_defconfig
-          # if [ "${{ github.event.inputs.lz4kd }}" == "Open" ]; then
-          #   # Add lz4kd
-          #   echo "CONFIG_CRYPTO_LZ4KD=y" >> ./common/arch/arm64/configs/gki_defconfig
-          #   echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          #   echo "CONFIG_ZRAM_WRITEBACK=y" >> ./common/arch/arm64/configs/gki_defconfig
-          # fi
+          if [ "${{ github.event.inputs.lz4kd }}" == "true" ]; then
+            # Add lz4kd
+            echo "CONFIG_CRYPTO_LZ4KD=y" >> ./common/arch/arm64/configs/gki_defconfig
+            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> ./common/arch/arm64/configs/gki_defconfig
+            echo "CONFIG_ZRAM_WRITEBACK=y" >> ./common/arch/arm64/configs/gki_defconfig
+          fi
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
           
       - name: 🔨 Build Kernel (构建内核)
         run: |
-          if [ "${{ github.event.inputs.KERNEL_VERSION }}" == "6.1" ]; then
-            export PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/prebuilts/clang/host/linux-x86/clang-r487747c/bin:$PATH"
-            export PATH="/usr/lib/ccache:$PATH"
-            sudo apt install libelf-dev
-            cd kernel_workspace/kernel_platform/common
-            # make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole LD=ld.lld  HOSTLD=ld.lld O=out gki_defconfig all
-            make -j$(nproc --all) LLVM=1 ARCH=arm64 SUBARCH=arm64 CONFIG_LTO_CLANG=y CONFIG_LTO_CLANG_THIN=y CONFIG_LTO_CLANG_FULL=n CONFIG_LTO_NONE=n CROSS_COMPILE=aarch64-linux-gnu- CC=clang RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole LD=ld.lld  HOSTLD=ld.lld O=out gki_defconfig all
-          else
-            cd kernel_workspace
-            LTO=thin ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
-          fi
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/prebuilts/clang/host/linux-x86/clang-r487747c/bin:$PATH"
+          export PATH="/usr/lib/ccache:$PATH"
+          sudo apt install libelf-dev
+          cd kernel_workspace/kernel_platform/common
+          # make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole LD=ld.lld  HOSTLD=ld.lld O=out gki_defconfig all
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 SUBARCH=arm64 CONFIG_LTO_CLANG=y CONFIG_LTO_CLANG_THIN=y CONFIG_LTO_CLANG_FULL=n CONFIG_LTO_NONE=n CROSS_COMPILE=aarch64-linux-gnu- CC=clang RUSTC=../../prebuilts/rust/linux-x86/1.73.0b/bin/rustc PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole LD=ld.lld  HOSTLD=ld.lld O=out gki_defconfig all
+
           
       - name: 📦 Package kernel to AnyKernel3 (打包内核到 AnyKernel3)
         run: |
           git clone https://github.com/Xiaomichael/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
-          dir1="kernel_workspace/kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/"
-          dir2="kernel_workspace/kernel_platform/bazel-out/k8-fastbuild/bin/msm-kernel/${{ github.event.inputs.CPUD }}_gki_kbuild_mixed_tree/"
-          dir3="kernel_workspace/kernel_platform/out/msm-${{ github.event.inputs.CPUD }}-${{ github.event.inputs.CPUD }}-gki/dist/"
-          dir4="kernel_workspace/kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/gki_kernel/common/arch/arm64/boot/"
-          dir5="kernel_workspace/kernel_platform/out/msm-${{ github.event.inputs.CPUD }}-${{ github.event.inputs.CPUD }}-gki/gki_kernel/common/arch/arm64/boot/"
+          dir1="kernel_workspace/kernel_platform/out/msm-kernel-${{ env.CPUD }}-gki/dist/"
+          dir2="kernel_workspace/kernel_platform/bazel-out/k8-fastbuild/bin/msm-kernel/${{ envs.CPUD }}_gki_kbuild_mixed_tree/"
+          dir3="kernel_workspace/kernel_platform/out/msm-${{ env.CPUD }}-${{ env.CPUD }}-gki/dist/"
+          dir4="kernel_workspace/kernel_platform/out/msm-kernel-${{ env.CPUD }}-gki/gki_kernel/common/arch/arm64/boot/"
+          dir5="kernel_workspace/kernel_platform/out/msm-${{ env.CPUD }}-${{ env.CPUD }}-gki/gki_kernel/common/arch/arm64/boot/"
           dir6="kernel_workspace/kernel_platform/common/out/arch/arm64/boot/"
           target1="./AnyKernel3/"
           target2="./kernel_workspace/kernel"
@@ -308,7 +292,7 @@ jobs:
       - name: 🛠️ KPM Patching Image Files (KPM 修补 Image 文件)
         if: ${{github.event.inputs.ksu_type == 'SukiUltra'}}
         run: |
-          cd kernel_workspace/kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist
+          cd kernel_workspace/kernel_platform/out/msm-kernel-${{ env.CPUD }}-gki/dist
           curl -LO https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/0.11.4/patch_linux
           chmod +x patch_linux
           ./patch_linux
@@ -317,28 +301,28 @@ jobs:
           cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
           cp Image $GITHUB_WORKSPACE/kernel_workspace/kernel
          
-      # - name: 📤 Upload AnyKernel3 with lz4kd (上传 AnyKernel3)
-      #   if: ${{ github.event.inputs.lz4kd == 'Open' }}
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #    name: AnyKernel3_SukiSU_Ultra_lz4kd_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
-      #    path: ./AnyKernel3/*
+      - name: 📤 Upload AnyKernel3 with lz4kd (上传 AnyKernel3)
+        if: ${{ github.event.inputs.lz4kd == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+         name: AnyKernel3_${{ github.event.inputs.ksu_type }}_lz4kd_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+         path: ./AnyKernel3/*
          
       - name: 📤 Upload AnyKernel3 (上传 AnyKernel3)
         uses: actions/upload-artifact@v4
         with:
-         name: AnyKernel3_SukiSU_Ultra_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+         name: AnyKernel3_${{ github.event.inputs.ksu_type }}_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
          path: ./AnyKernel3/*
          
-      # - name: 📝 Find zram.ko & crypto_zstdn.ko (查找 zram.ko & crypto_zstdn.ko)
-      #   if: ${{ github.event.inputs.lz4kd == 'Open' }}
-      #   run: |
-      #     find -name zram.ko
-      #     find -name crypto_zstdn.ko
+      - name: 📝 Find zram.ko & crypto_zstdn.ko (查找 zram.ko & crypto_zstdn.ko)
+        if: ${{ github.event.inputs.lz4kd == 'true' }}
+        run: |
+          find -name zram.ko
+          find -name crypto_zstdn.ko
           
-      # - name: 📤 Upload zram.ko (上传 zram.ko)
-      #   if: ${{ github.event.inputs.lz4kd == 'Open' }}
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: zram.ko
-      #     path: ./kernel_workspace/kernel_platform/common/out/drivers/block/zram/zram.ko
+      - name: 📤 Upload zram.ko (上传 zram.ko)
+        if: ${{ github.event.inputs.lz4kd == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: zram.ko
+          path: ./kernel_workspace/kernel_platform/common/out/drivers/block/zram/zram.ko
